@@ -4,7 +4,7 @@ import "./index.css";
 import { openai, supabase, EMBEDDING_MODEL } from "./lib/config.js";
 import { seedMoviesIfEmpty } from "./scripts/seed.js";
 
-/* ─────────────────────────  Poster helper (OMDb)  ───────────────────────── */
+/* ─────────────────────────  OMDb poster helper  ───────────────────────── */
 const OMDB_KEY = import.meta.env.VITE_OMDB_API_KEY;
 
 async function fetchPoster(title, year) {
@@ -76,7 +76,32 @@ function Pill({ children }) {
   );
 }
 
-/* ─────────────────────────  Start View  ───────────────────────── */
+function Chip({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-8 px-3 rounded-md border text-xs font-medium transition
+      ${active ? "bg-slate-200 text-black border-slate-200" : "bg-[#0b1630] text-slate-200 border-slate-700 hover:border-slate-500"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ChipGroup({ value, onChange, options }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => (
+        <Chip key={opt} active={value === opt} onClick={() => onChange(opt)}>
+          {opt}
+        </Chip>
+      ))}
+    </div>
+  );
+}
+
+/* ─────────────────────────  Start View (Figma)  ───────────────────────── */
 function StartView({ onStart }) {
   const [count, setCount] = useState(2);
   const [minutes, setMinutes] = useState(120);
@@ -124,7 +149,7 @@ function StartView({ onStart }) {
   );
 }
 
-/* ─────────────────────────  Person View(s)  ───────────────────────── */
+/* ─────────────────────────  Person View(s) (Figma)  ───────────────────────── */
 function PersonView({ index, total, initial, onNext, onFinish }) {
   const [fav, setFav] = useState(initial?.fav ?? "");
   const [era, setEra] = useState(initial?.era ?? "New");
@@ -155,7 +180,7 @@ function PersonView({ index, total, initial, onNext, onFinish }) {
         </div>
       </div>
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-5 space-y-4">
         <div className="space-y-2">
           <label className="text-slate-300 text-sm">What’s your favorite movie and why?</label>
           <textarea
@@ -169,24 +194,12 @@ function PersonView({ index, total, initial, onNext, onFinish }) {
 
         <div className="space-y-2">
           <label className="text-slate-300 text-sm">Are you in the mood for something new or a classic?</label>
-          <Pill>
-            <select className="bg-transparent outline-none w-full" value={era} onChange={(e) => setEra(e.target.value)}>
-              <option>New</option>
-              <option>Classic</option>
-            </select>
-          </Pill>
+          <ChipGroup value={era} onChange={setEra} options={["New", "Classic"]} />
         </div>
 
         <div className="space-y-2">
           <label className="text-slate-300 text-sm">What are you in the mood for?</label>
-          <Pill>
-            <select className="bg-transparent outline-none w-full" value={tone} onChange={(e) => setTone(e.target.value)}>
-              <option>Fun</option>
-              <option>Serious</option>
-              <option>Inspiring</option>
-              <option>Scary</option>
-            </select>
-          </Pill>
+          <ChipGroup value={tone} onChange={setTone} options={["Fun", "Serious", "Inspiring", "Scary"]} />
         </div>
 
         <div className="space-y-2">
@@ -206,53 +219,50 @@ function PersonView({ index, total, initial, onNext, onFinish }) {
   );
 }
 
-/* ─────────────────────────  Result View (Figma-style)  ───────────────────────── */
+/* ─────────────────────────  Result View (Figma)  ───────────────────────── */
 function ResultView({ result, onAgain, onNext, nextLoading }) {
   return (
     <PhoneCard
       footer={
         <div className="grid grid-cols-2 gap-3">
-          <GreenButton onClick={onAgain}>Go Again</GreenButton>
           <button
-            onClick={onNext}
-            disabled={nextLoading}
-            className={`rounded-xl h-12 font-semibold ${
-              nextLoading ? "bg-slate-700 text-slate-300 cursor-not-allowed" : "bg-slate-700 hover:bg-slate-600 text-white"
-            }`}
+            onClick={onAgain}
+            className="rounded-xl h-12 font-semibold bg-slate-700 hover:bg-slate-600 text-white"
           >
-            {nextLoading ? "Finding…" : "Next Movie"}
+            Go Again
           </button>
+          <GreenButton disabled={nextLoading} onClick={onNext}>
+            {nextLoading ? "Finding…" : "Next Movie"}
+          </GreenButton>
         </div>
       }
     >
       <div className="text-center">
         <div className="text-slate-300 text-xs uppercase tracking-wide">Recommendation</div>
-        <h2 className="text-2xl font-extrabold mt-2">{result.title}</h2>
-        {result.year && <div className="text-slate-400 text-sm mt-1">({result.year})</div>}
+        <h2 className="text-2xl font-extrabold mt-2">
+          {result.title} {result.year ? <span className="text-slate-400 text-base">({result.year})</span> : null}
+        </h2>
       </div>
 
       {/* Poster */}
       {result.poster && (
         <div className="mt-5 flex justify-center">
-          <img
-            src={result.poster}
-            alt={`${result.title} poster`}
-            className="w-56 h-auto object-cover rounded-xl shadow-[0_20px_60px_rgba(0,0,0,.45)] border border-slate-800"
-          />
+          <div className="rounded-xl overflow-hidden border border-slate-800 shadow-[0_20px_60px_rgba(0,0,0,.45)]">
+            <img
+              src={result.poster}
+              alt={`${result.title} poster`}
+              className="w-[230px] h-[340px] object-cover"
+            />
+          </div>
         </div>
       )}
 
-      <div className="mt-5 space-y-4">
-        <p className="text-slate-200 text-sm leading-relaxed">{result.description}</p>
-
-        {result.explanation && (
-          <div className="rounded-xl bg-[#0b1630] border border-slate-800 p-3 text-slate-100 text-sm">
-            {result.explanation}
-          </div>
-        )}
-
-        <div className="text-[11px] text-slate-500">Similarity: {result.similarity?.toFixed(3)}</div>
+      {/* Description bubble */}
+      <div className="mt-5 rounded-xl bg-[#0b1630] border border-slate-800 p-3 text-slate-100 text-sm leading-relaxed">
+        {result.explanation || result.description}
       </div>
+
+      <div className="mt-2 text-[11px] text-slate-500">Similarity: {result.similarity?.toFixed(3)}</div>
     </PhoneCard>
   );
 }
@@ -273,7 +283,7 @@ export default function App() {
 
   const [seedStatus, setSeedStatus] = useState("");
 
-  // Seed once (only if empty)
+  // seed db on first load (if empty)
   useEffect(() => {
     (async () => {
       try {
@@ -307,7 +317,7 @@ export default function App() {
     const queryEmbedding = emb.data[0].embedding;
     setLastEmbedding(queryEmbedding);
 
-    // 2) match from Supabase
+    // 2) match in supabase
     const { data: matches, error } = await supabase.rpc("match_movies", {
       query_embedding: queryEmbedding,
       match_count: 3,
@@ -319,7 +329,7 @@ export default function App() {
 
     setLastShownIds((prev) => [...prev, pick.id]);
 
-    // 3) explanation
+    // 3) brief explanation
     const sys =
       "You are PopChoice, a warm, concise movie recommender. Explain in 1–2 sentences why the film fits the group's mood. No spoilers.";
     const user = `Group answers:\n${textPrompt}\n\nRecommended movie:\n${pick.title} (${pick.release_year})\n${pick.description}`;
@@ -342,11 +352,11 @@ export default function App() {
       description: pick.description,
       explanation: chat.choices?.[0]?.message?.content?.trim() ?? "",
       similarity: pick.similarity,
-      poster, // 👈 used by ResultView
+      poster,
     };
   }
 
-  /* Flow handlers */
+  /* flow */
   function handleStart({ count, minutes: mins }) {
     setPeopleCount(count);
     setMinutes(mins);
